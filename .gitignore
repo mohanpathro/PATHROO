@@ -42,3 +42,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local-only working files (untracked 2026-09-04)
+/secure.md
+/lint-results.txt
+/lint-fix-results.txt
+/ethglobal.html
+/test-resume.txt
+/test-resume.pdf
