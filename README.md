@@ -85,12 +85,13 @@ All fetched **server-side** (no per-request scraping in the browser), cached for
 | 10 | **Arbeitnow** | green | Internships | Public job-board API (remote/early-career breadth) |
 | 11 | **Adzuna** ¹ | green | Internships | `api.adzuna.com` India jobs endpoint |
 | 12 | **Luma** | amber | Events | Public JSON `api.luma.com` — meetups, workshops, talks across 5 Indian cities |
-| 13 | **Scholarships** | seed | Scholarships | Curated dataset of ~29 real Indian awards (govt + private + study-abroad) |
-| 14 | **Seed** | seed | Mixed | ~20 curated India-relevant fallbacks so the feed is never empty offline |
+| 13 | **HackerEarth** | green | Hackathons + Competitions | Public events JSON `/chrome-extension/events/` — zero-auth, all-online challenges |
+| 14 | **Scholarships** | seed | Scholarships | Curated dataset of ~29 real Indian awards (govt + private + study-abroad) |
+| 15 | **Seed** | seed | Mixed | ~20 curated India-relevant fallbacks so the feed is never empty offline |
 
 > ¹ **Env-gated** — these sources only join the registry when their API keys are set in `.env.local`. Add the keys, restart, done.
 
-> **Avoided on purpose:** LinkedIn / Indeed / Internshala scraping (ToS / legal risk) and DoraHacks (strict anti-bot WAFs/hidden search APIs). We deep-link out instead. See `src/lib/sources/*` — each adapter implements the same `SourceAdapter` contract and one failure never sinks the run (`Promise.allSettled`).
+> **Avoided on purpose:** LinkedIn / Indeed / Internshala scraping (ToS / legal risk) and DoraHacks (strict anti-bot WAFs/hidden search APIs). **HackCulture** has no usable public surface — its listing page is client-rendered, its sitemap lists no individual events, its detail pages server-render only an `og:title` (no dates, location or prize), and the `/api/v1/hackathons/` endpoint that holds the real data is both credential-gated and explicitly `Disallow`ed in their `robots.txt`. We deep-link out instead. See `src/lib/sources/*` — each adapter implements the same `SourceAdapter` contract and one failure never sinks the run (`Promise.allSettled`).
 
 ---
 
@@ -105,13 +106,32 @@ A transparent two-stage recommender that runs as a pure function in milliseconds
    skill 0.40 · interest 0.25 · urgency 0.15 · recency 0.10 · popularity 0.05 · location 0.05
    ```
 
+   Location rises to **0.15** (and the rest renormalise) as soon as the student's home city resolves — at 0.05 even a perfect local match moved the final score by less than 0.03.
+
    - **skill** — overlap of your skills with the opportunity's tags over a shared ~150-term controlled vocabulary (with a synonym map: `ml → machine-learning`, `js → javascript`, …). Branch affinity seeds matches for cold-start profiles.
    - **urgency** — peaks ~8 days out (the sweet spot to act), penalises <2 days and far-off items.
-   - **recency** — `exp(-ageDays/14)`. **popularity** — `log1p` of applicants. **location** — remote / same-city / relocate.
+   - **recency** — `exp(-ageDays/14)`. **popularity** — `log1p` of applicants.
+   - **location** — see locality below.
    - **Cold-start**: signals a new profile can't produce are dropped and the weights renormalise.
    - **Explainability is free** — the top contributing signals are templated into chips like *"Matches 2 of your skills: Machine Learning, Python · Closes in 5 days"*. Open any card → **"How this was scored"** shows the full weighted breakdown.
 
 Default feed sort is **Closing soonest** (the deadline value prop); also Best match and Newest.
+
+### Locality (`src/lib/geo.ts`)
+
+Source locations are free text — `Bengaluru, India`, `Bangalore`, `Bengaluru-VTP`, `New Delhi, Delhi, India`, `Hybrid; In-Office`, `Remote - USA`. Substring-matching a student's city against that treats a Noida hackathon exactly like a Munich one, which is wrong for anyone in a commuter region.
+
+Both sides are resolved onto shared **metro clusters** — the region people actually treat as one place — and the relationship is graded:
+
+```
+remote 1.00 · city 1.00 · metro 0.92 · state 0.70 · country 0.35 · far 0.12 · unknown 0.60
+```
+
+`unknown` deliberately sits **above** `country`: an unparseable location must never rank below one we know to be far away, matching the eligibility rule that missing data means open. Region-locked remote (`Remote - USA`) scores 0.45 — surfaced, never hidden, but not equal to a globally open online event.
+
+So a student in **Delhi** sees Noida, Gurugram, Ghaziabad, Faridabad and Greater Noida as local, with a *"Near you in Noida"* chip explaining why. The **Near me** feed filter keeps city / metro / state plus online items and lists physically local events first. The profile names the detected region back to you (*"Delhi NCR — you'll also see events in Noida, Gurugram…"*) so nearby results read as intentional.
+
+Clusters cover ~50 Indian metros with renames (`Bangalore→Bengaluru`, `Gurgaon→Gurugram`), tech-park sub-localities (Whitefield, Gachibowli, Hinjewadi) and the multi-city / prose shapes the corpus actually contains.
 
 ---
 
