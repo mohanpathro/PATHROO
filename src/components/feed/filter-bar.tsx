@@ -8,6 +8,8 @@ import { CATEGORIES } from "@/lib/types";
 import { Chip, Segmented } from "../ui/primitives";
 import { CATEGORY_COLOR, CATEGORY_ICON, CATEGORY_LABEL } from "./category-icon";
 import { SKILL_LABELS } from "@/lib/taxonomy";
+import { clusterFor } from "@/lib/geo";
+import { useProfile } from "@/store/profile";
 import { cn } from "@/lib/utils";
 
 const DEADLINE_OPTS: { value: DeadlineWindow; label: string }[] = [
@@ -20,6 +22,7 @@ const DEADLINE_OPTS: { value: DeadlineWindow; label: string }[] = [
 
 const LOCATION_OPTS: { value: LocationFilter; label: string }[] = [
   { value: "all", label: "Anywhere" },
+  { value: "nearby", label: "Near me" },
   { value: "remote", label: "Remote" },
   { value: "onsite", label: "On-site" },
 ];
@@ -53,6 +56,14 @@ export function FilterBar({
   lockedCategory?: Category;
 }) {
   const [open, setOpen] = useState(false);
+  const profile = useProfile((s) => s.profile);
+
+  // Name the student's actual commuter region so "Near me" is self-explanatory:
+  // a Delhi student sees "Delhi NCR", which is what makes Noida/Gurugram
+  // results make sense rather than looking like a bug.
+  const region = clusterFor(profile.location, profile.state);
+  const hasHome = Boolean(profile.location?.trim() || profile.state);
+  const nearLabel = region ? `Near me · ${region.label}` : "Near me";
 
   const activeCat = filter.categories?.[0];
   const tags = filter.tags ?? [];
@@ -147,7 +158,7 @@ export function FilterBar({
             )}
             {loc !== "all" && (
               <Chip active onClick={() => setFilter({ ...filter, location: "all" })} className="shrink-0">
-                {loc === "remote" ? "Remote" : "On-site"}
+                {loc === "nearby" ? nearLabel : loc === "remote" ? "Remote" : "On-site"}
                 <X size={12} />
               </Chip>
             )}
@@ -197,12 +208,28 @@ export function FilterBar({
           </FilterGroup>
 
           <FilterGroup label="Location">
-            {LOCATION_OPTS.map((o) => (
-              <Chip key={o.value} active={loc === o.value} onClick={() => setFilter({ ...filter, location: o.value })}>
-                {o.label}
+            {LOCATION_OPTS.filter((o) => o.value !== "nearby" || hasHome).map((o) => (
+              <Chip
+                key={o.value}
+                active={loc === o.value}
+                onClick={() => setFilter({ ...filter, location: o.value })}
+                count={o.value === "nearby" ? facets?.nearby : o.value === "remote" ? facets?.remote : undefined}
+              >
+                {o.value === "nearby" ? nearLabel : o.label}
               </Chip>
             ))}
           </FilterGroup>
+          {loc === "nearby" && region && (
+            <p className="-mt-1 text-[11px] leading-relaxed text-ink-3">
+              Showing {region.label} — {region.cities.slice(0, 5).join(", ")}
+              {region.cities.length > 5 ? " and nearby" : ""} — plus anything online.
+            </p>
+          )}
+          {!hasHome && (
+            <p className="-mt-1 text-[11px] leading-relaxed text-ink-3">
+              Add your home city in your profile to filter by what&apos;s happening near you.
+            </p>
+          )}
 
           {activeCount > 0 && (
             <button onClick={clearAll} className="flex items-center gap-1 pt-1 text-[12px] font-medium text-ink-3 hover:text-ink">

@@ -1,5 +1,6 @@
 import type { Opportunity, Profile, ScoreBreakdown, ScoredOpportunity } from "./types";
 import { passesEligibility } from "./eligibility";
+import { proximity, resolveHome, type PlaceRef, type Proximity } from "./geo";
 import { BRANCHES, SKILL_LABELS } from "./taxonomy";
 import { deadlineInfo } from "./format";
 import { clamp, uniq } from "./utils";
@@ -36,7 +37,15 @@ export interface RankContext {
   now: number;
   maxPop: number;
   weights: Record<string, number>;
+  /**
+   * The student's resolved home. Optional so existing callers keep working;
+   * when omitted it is derived from the profile on first use.
+   */
+  home?: PlaceRef;
 }
+
+/** Location weight once the student's home resolves to a real place. */
+const LOCATED_LOCATION_WEIGHT = 0.15;
 
 /** Cold-start: zero out signals the profile can't produce, then renormalise. */
 export function effectiveWeights(profile: Profile): Record<string, number> {
@@ -45,6 +54,13 @@ export function effectiveWeights(profile: Profile): Record<string, number> {
     (profile.skills?.length ?? 0) > 0 ||
     (profile.branch ? (BRANCH_AFFINITY[profile.branch]?.length ?? 0) > 0 : false);
   if (!hasSkillSignal) w.skill = 0;
+
+  // A student who told us their city is asking to be shown what is near them.
+  // At the 0.05 base weight even a perfect local match shifted the final score
+  // by <0.03, so locality was effectively invisible in the ordering.
+  const home = resolveHome(profile.location, profile.state);
+  const located = home.cities.length > 0 || home.clusters.length > 0 || home.states.length > 0;
+  if (located) w.location = LOCATED_LOCATION_WEIGHT;
 
   const total = Object.values(w).reduce((a, b) => a + b, 0) || 1;
   for (const k of Object.keys(w)) w[k] = w[k] / total;
@@ -107,15 +123,13 @@ function popularitySignal(o: Opportunity, maxPop: number): number {
   return Math.log1p(o.popularity) / Math.log1p(maxPop);
 }
 
-function locationSignal(o: Opportunity, profile: Profile): number {
-  if (o.isRemote) return 1;
-  const oloc = (o.location ?? "").toLowerCase();
-  const city = (profile.location ?? "").toLowerCase().trim();
-  if (city && oloc.includes(city)) return 1;
-  if (profile.state && oloc.includes(profile.state.replace(/-/g, " "))) return 0.6;
-  if (profile.willingToRelocate) return 0.6;
-  if (!oloc) return 0.6; // unknown location → don't punish
-  return 0.4;
+/**
+ * Locality signal. Delegates to the geo layer so a commuter region counts as
+ * local: a student in Delhi scores Noida / Gurugram / Ghaziabad events at 0.92
+ * instead of the flat 0.4 a substring match used to give them.
+ */
+function locationSignal(o: Opportunity, profile: Profile, home: PlaceRef): Proximity {
+  return proximity(o, home, { willingToRelocate: profile.willingToRelocate });
 }
 
 // ── Scoring ──────────────────────────────────────────────────────────────────
@@ -126,13 +140,15 @@ export function scoreOpportunity(
   ctx: RankContext,
 ): ScoredOpportunity {
   const skill = skillSignal(o, profile);
+  const home = ctx.home ?? resolveHome(profile.location, profile.state);
+  const prox = locationSignal(o, profile, home);
   const raw: ScoreBreakdown = {
     skill: skill.score,
     interest: interestSignal(o, profile),
     recency: recencySignal(o, ctx.now),
     urgency: urgencySignal(o, ctx.now),
     popularity: popularitySignal(o, ctx.maxPop),
-    location: locationSignal(o, profile),
+    location: prox.score,
   };
 
   const w = ctx.weights;
@@ -150,10 +166,10 @@ export function scoreOpportunity(
     1,
   );
 
-  const reasons = buildReasons(o, profile, raw, breakdown, skill.matched, ctx.now);
+  const reasons = buildReasons(o, profile, raw, breakdown, skill.matched, ctx.now, prox);
   const matchLevel: 1 | 2 | 3 = score >= 0.66 ? 3 : score >= 0.42 ? 2 : 1;
 
-  return { opportunity: o, score, breakdown, rawSignals: raw, reasons, matchLevel };
+  return { opportunity: o, score, breakdown, rawSignals: raw, reasons, matchLevel, proximity: prox };
 }
 
 /** Deterministic, template-based "why this matched you" — no LLM. */
@@ -164,6 +180,7 @@ function buildReasons(
   breakdown: ScoreBreakdown,
   matchedSkills: string[],
   now: number,
+  prox: Proximity,
 ): string[] {
   const candidates: { key: SignalKey; weight: number; text: string }[] = [];
 
@@ -206,10 +223,18 @@ function buildReasons(
     candidates.push({ key: "recency", weight: breakdown.recency, text: "Freshly posted" });
   }
 
-  if (o.isRemote) {
+  if (prox.tier === "city" || prox.tier === "metro") {
+    // A genuinely local event is the strongest reason to show it — weight it
+    // above the raw signal so it always makes the three-chip cut.
+    candidates.push({
+      key: "location",
+      weight: 1,
+      text: prox.label ?? (o.location ? `In ${o.location}` : "Near you"),
+    });
+  } else if (prox.tier === "state" && prox.label) {
+    candidates.push({ key: "location", weight: breakdown.location, text: prox.label });
+  } else if (o.isRemote || prox.tier === "remote") {
     candidates.push({ key: "location", weight: breakdown.location * 0.5, text: "Remote" });
-  } else if (raw.location >= 1 && o.location) {
-    candidates.push({ key: "location", weight: breakdown.location, text: `In ${o.location}` });
   }
 
   return candidates
@@ -260,7 +285,8 @@ export function rank(opps: Opportunity[], profile: Profile, opts: RankOptions = 
   }
 
   const maxPop = pool.reduce((m, o) => Math.max(m, o.popularity ?? 0), 0);
-  const ctx: RankContext = { now, maxPop, weights };
+  // Parse the student's geography once per pass, not once per opportunity.
+  const ctx: RankContext = { now, maxPop, weights, home: resolveHome(profile.location, profile.state) };
 
   const items = pool
     .map((o) => {

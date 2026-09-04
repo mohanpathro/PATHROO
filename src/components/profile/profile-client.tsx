@@ -7,6 +7,7 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import type { Category, Gender, SocialCategory } from "@/lib/types";
 import { BRANCHES, YEARS, SOCIAL_CATEGORIES, INDIAN_STATES, STATE_LABELS, INTEREST_OPTIONS, SKILLS } from "@/lib/taxonomy";
+import { clusterFor, KNOWN_CITIES } from "@/lib/geo";
 import { CATEGORY_ICON, CATEGORY_COLOR } from "../feed/category-icon";
 import { Button } from "../ui/button";
 import { Chip, Toggle } from "../ui/primitives";
@@ -216,9 +217,17 @@ export function ProfileClient() {
                   <input
                     value={profile.location ?? ""}
                     onChange={(e) => setProfile({ location: e.target.value })}
-                    placeholder="e.g. Pune"
+                    placeholder="e.g. Noida"
+                    list="known-cities"
+                    autoComplete="off"
                     className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-ink-3"
                   />
+                  <datalist id="known-cities">
+                    {KNOWN_CITIES.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                  <RegionHint location={profile.location} state={profile.state} />
                 </Field>
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] text-ink-2">Open to relocating</span>
@@ -377,6 +386,33 @@ export function ProfileClient() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Confirms the commuter region we resolved the student's city to, and names the
+ * neighbouring cities they will now see. Without this, a Delhi student getting
+ * Noida results has no way to tell that it is intentional.
+ */
+function RegionHint({ location, state }: { location?: string; state?: string }) {
+  const region = clusterFor(location, state);
+  if (!location?.trim()) return null;
+  if (!region) {
+    return (
+      <p className="mt-1.5 text-[11px] leading-relaxed text-ink-3">
+        We don&apos;t recognise this city yet, so nearby matching is off. Try the nearest large city.
+      </p>
+    );
+  }
+  const others = region.cities.filter((c) => c.toLowerCase() !== location.trim().toLowerCase());
+  return (
+    <p className="mt-1.5 text-[11px] leading-relaxed text-ink-3">
+      <span className="font-medium text-ink-2">{region.label}</span>
+      {others.length > 0 && (
+        <> — you&apos;ll also see events in {others.slice(0, 6).join(", ")}
+        {others.length > 6 ? ` +${others.length - 6} more` : ""}.</>
+      )}
+    </p>
   );
 }
 

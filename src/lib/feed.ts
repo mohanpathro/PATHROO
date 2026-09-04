@@ -2,11 +2,12 @@ import type { Category, Profile, ScoredOpportunity } from "./types";
 import type { Corpus } from "./store";
 import { rank } from "./rank";
 import { CATEGORIES } from "./types";
+import { isNearby } from "./geo";
 
 const MS_DAY = 86_400_000;
 
 export type DeadlineWindow = "all" | "24h" | "3d" | "7d" | "30d";
-export type LocationFilter = "all" | "remote" | "onsite";
+export type LocationFilter = "all" | "nearby" | "remote" | "onsite";
 export type SortKey = "closing" | "match" | "newest";
 
 export interface FilterState {
@@ -24,6 +25,8 @@ export interface Facets {
   category: Record<Category, number>;
   total: number;
   remote: number;
+  /** Items in the student's city / commuter region / state, or online. */
+  nearby: number;
   closingThisWeek: number;
   withDeadline: number;
   /** Most common tags within the active category (the per-category filter set). */
@@ -69,6 +72,16 @@ function matchesFilter(s: ScoredOpportunity, f: FilterState, now: number): boole
 
   if (f.location === "remote" && o.isRemote !== true) return false;
   if (f.location === "onsite" && o.isRemote === true) return false;
+  if (f.location === "nearby") {
+    // "Near me" keeps anything in the student's city, commuter region or state,
+    // plus online items — those are attendable from home, so excluding them
+    // would strip the feed of half its value. Only genuinely distant and
+    // region-locked items are dropped.
+    const tier = s.proximity?.tier;
+    if (!tier) return false;
+    if (!isNearby(tier) && tier !== "remote") return false;
+    if (tier === "remote" && (s.proximity?.score ?? 1) < 0.6) return false;
+  }
 
   if (f.tags?.length && !f.tags.some((t) => o.tags.includes(t))) return false;
 
@@ -108,6 +121,7 @@ function sortItems(items: ScoredOpportunity[], sort: SortKey, now: number): Scor
 function buildFacets(items: ScoredOpportunity[], now: number, catScope?: Category): Facets {
   const category = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<Category, number>;
   let remote = 0;
+  let nearby = 0;
   let closingThisWeek = 0;
   let withDeadline = 0;
   const tagCount = new Map<string, number>();
@@ -115,6 +129,8 @@ function buildFacets(items: ScoredOpportunity[], now: number, catScope?: Categor
     const o = s.opportunity;
     category[o.category]++;
     if (o.isRemote) remote++;
+    const tier = s.proximity?.tier;
+    if (tier && isNearby(tier)) nearby++;
     const d = daysLeft(o.deadline, now);
     if (d != null) {
       withDeadline++;
@@ -129,7 +145,7 @@ function buildFacets(items: ScoredOpportunity[], now: number, catScope?: Categor
     .map(([tag, count]) => ({ tag, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 16);
-  return { category, total: items.length, remote, closingThisWeek, withDeadline, topTags };
+  return { category, total: items.length, remote, nearby, closingThisWeek, withDeadline, topTags };
 }
 
 /**
@@ -152,6 +168,14 @@ export function buildFeed(
   const catScope = filter.categories?.length === 1 ? filter.categories[0] : undefined;
   const facets = buildFacets(ranked, now, catScope);
   const filtered = ranked.filter((s) => matchesFilter(s, filter, now));
-  const items = sortItems(filtered, sort, now).slice(0, 200);
+  let ordered = sortItems(filtered, sort, now);
+  if (filter.location === "nearby") {
+    // Stable partition: things actually happening around the student first,
+    // online items after, each half keeping the chosen sort order.
+    const local = ordered.filter((s) => s.proximity && isNearby(s.proximity.tier));
+    const online = ordered.filter((s) => !s.proximity || !isNearby(s.proximity.tier));
+    ordered = [...local, ...online];
+  }
+  const items = ordered.slice(0, 200);
   return { items, facets, broadened, total: filtered.length, eligibleTotal: ranked.length };
 }

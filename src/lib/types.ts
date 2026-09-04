@@ -182,6 +182,8 @@ export interface ScoredOpportunity {
   matchLevel: 1 | 2 | 3;
   /** True when the item survived only because of relaxed (broadened) filters. */
   broadened?: boolean;
+  /** How local this is to the student — see lib/geo.proximity. */
+  proximity?: import("./geo").Proximity;
 }
 
 // ─── Nudges ─────────────────────────────────────────────────────────────────
