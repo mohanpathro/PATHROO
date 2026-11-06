@@ -1,6 +1,7 @@
 import type { Opportunity, SourceAdapter } from "../types";
 import { buildTags } from "../normalize";
 import { BROWSER_UA, buildOpportunity, fetchJson, snippet } from "./_shared";
+import { sanitizeSourceError } from "./diagnostics";
 
 interface DoraHacksItem {
   id: number;
@@ -89,7 +90,7 @@ export const dorahacksAdapter: SourceAdapter = {
         
         if (!data.next) break;
       } catch (err) {
-        console.error(`DoraHacks page ${page} failed:`, err);
+        console.error(`DoraHacks page ${page} failed: ${sanitizeSourceError(err)}`);
         break;
       }
     }

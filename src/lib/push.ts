@@ -14,7 +14,7 @@ const CACHE_DIR = path.join(process.cwd(), ".cache");
 const VAPID_FILE = path.join(CACHE_DIR, "vapid.json");
 const SUBS_FILE = path.join(CACHE_DIR, "subscriptions.json");
 
-const SUBJECT = "mailto:hello@Argus.app";
+const SUBJECT = "https://opportunity-radar-theta.vercel.app";
 
 interface VapidKeys {
   publicKey: string;

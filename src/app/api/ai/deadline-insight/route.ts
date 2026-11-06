@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateText } from "@/lib/ai/groq";
+import { generateText, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { deadlineInsightPrompt } from "@/lib/ai/prompts";
 import { getCachedAI, setCachedAI, contentHash } from "@/lib/ai/cache";
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ insight, cached: false });
   } catch (err: unknown) {
-    console.error("[AI Deadline]", err);
+    logAIError("AI Deadline", err);
     return NextResponse.json({ error: "Failed to generate deadline insight" }, { status: 500 });
   }
 }

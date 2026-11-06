@@ -31,17 +31,21 @@ const notoDeva = Noto_Sans_Devanagari({
 
 export const metadata: Metadata = {
   title: {
-    default: "Argus — lock onto your goals",
-    template: "%s · Argus",
+    default: "PATHROO — Find Your Path. Unlock Your Future.",
+    template: "%s · PATHROO",
   },
   description:
-    "Argus aggregates internships, scholarships, competitions and hackathons from live sources into one personalised feed, filters them to your profile, and nudges you before every deadline.",
-  applicationName: "Argus",
+    "PATHROO helps you discover opportunities, qualify your matches, prepare your applications, and achieve your goals.",
+  applicationName: "PATHROO",
+  icons: {
+    icon: "/pathroo-favicon.svg",
+    apple: "/pathroo-app-icon.svg",
+  },
   keywords: ["internships", "scholarships", "hackathons", "competitions", "students", "India", "deadline reminders"],
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f5f6f8",
+  themeColor: "#f7f5ff",
   width: "device-width",
   initialScale: 1,
 };

@@ -91,6 +91,9 @@ export const codechefAdapter: SourceAdapter = {
       data = await fetchJson<CodechefResponse>(ENDPOINT, { ua: BROWSER_UA, timeoutMs: 12_000 });
     }
 
+    if (!Array.isArray(data.present_contests) || !Array.isArray(data.future_contests)) {
+      throw new Error("CodeChef API returned a malformed contest list.");
+    }
     const contests = [...(data.present_contests ?? []), ...(data.future_contests ?? [])];
     const out: Opportunity[] = [];
     const seen = new Set<string>();

@@ -2,11 +2,11 @@ import type { Opportunity, SourceAdapter } from "../types";
 import { buildTags } from "../normalize";
 import { toISO } from "../parse";
 import { BROWSER_UA, buildOpportunity, fetchText } from "./_shared";
+import { sanitizeSourceError } from "./diagnostics";
 
 // MLH (Major League Hacking) season events. No API, but the season page embeds a
-// JSON payload with an `upcomingEvents` array — we extract that directly (far more
-// robust than DOM scraping). Keyless. Deep-links to each event's own website.
-const SEASON_URL = "https://mlh.com/seasons/2026/events";
+// JSON payload with an `upcomingEvents` array — extract current and next season.
+// Keyless. Deep-links to each event's own website.
 
 interface MlhEvent {
   name?: string;
@@ -20,6 +20,9 @@ interface MlhEvent {
   logoUrl?: string;
   backgroundUrl?: string;
 }
+
+/** Fallback deep link when an event exposes neither its own website nor an MLH path. */
+const SEASON_URL = "https://mlh.com";
 
 /** Extract a JSON array value by key from a larger blob via bracket matching. */
 function extractJsonArray(html: string, key: string): unknown[] | null {
@@ -59,7 +62,7 @@ function normalize(e: MlhEvent): Opportunity | null {
   if (!e.name) return null;
   const digital = e.formatType === "digital" || /everywhere|worldwide|online|digital/i.test(e.location ?? "");
   const sourceUrl = e.websiteUrl || (e.url ? `https://mlh.com${e.url}` : SEASON_URL);
-  return buildOpportunity("mlh", "MLH", {
+  const opportunity = buildOpportunity("mlh", "MLH", {
     category: "hackathon",
     title: e.name.trim(),
     organization: "Major League Hacking",
@@ -73,6 +76,7 @@ function normalize(e: MlhEvent): Opportunity | null {
     summary: [e.location, e.dateRange].filter(Boolean).join(" · ") || undefined,
     tags: buildTags({ text: e.name, limit: 6 }),
   });
+  return opportunity;
 }
 
 export const mlhAdapter: SourceAdapter = {
@@ -84,12 +88,39 @@ export const mlhAdapter: SourceAdapter = {
     tier: "amber",
   },
   async fetch(): Promise<Opportunity[]> {
-    const html = await fetchText(SEASON_URL, { ua: BROWSER_UA, timeoutMs: 12_000 });
-    const events = (extractJsonArray(html, "upcomingEvents") ?? []) as MlhEvent[];
+    const currentYear = new Date().getUTCFullYear();
+    const years = [currentYear, currentYear + 1];
+    const results = await Promise.allSettled(years.map(async (year) => {
+      const url = `https://mlh.com/seasons/${year}/events`;
+      const html = await fetchText(url, { ua: BROWSER_UA, timeoutMs: 12_000 });
+      const events = extractJsonArray(html, "upcomingEvents");
+      if (!events) throw new Error("MLH season page did not contain upcoming events.");
+      return events as MlhEvent[];
+    }));
+
+    const events: MlhEvent[] = [];
+    let successfulSeasons = 0;
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "fulfilled") {
+        successfulSeasons++;
+        events.push(...result.value);
+      } else {
+        console.warn(
+          `[MLH] ${years[i]} season failed: ${sanitizeSourceError(result.reason)}`,
+        );
+      }
+    }
+    if (successfulSeasons === 0) throw new Error("MLH season pages were unavailable.");
+
     const out: Opportunity[] = [];
+    const seen = new Set<string>();
     for (const e of events) {
       const o = normalize(e);
-      if (o) out.push(o);
+      if (o && !seen.has(o.sourceUrl)) {
+        seen.add(o.sourceUrl);
+        out.push(o);
+      }
     }
     return out;
   },

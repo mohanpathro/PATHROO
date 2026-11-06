@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateText } from "@/lib/ai/groq";
+import { generateText, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { whyMatchesYouPrompt } from "@/lib/ai/prompts";
 import { getCachedAI, setCachedAI, contentHash } from "@/lib/ai/cache";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ match: result, cached: false });
   } catch (err: unknown) {
-    console.error("[AI Match]", err);
+    logAIError("AI Match", err);
     return NextResponse.json({ error: "Failed to generate match reason" }, { status: 500 });
   }
 }

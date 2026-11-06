@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <title>PATHROO P symbol</title>
+  <defs>
+    <linearGradient id="pathroo-gradient" x1="20" y1="108" x2="110" y2="13" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <path d="M30 108c-4-30-2-66 2-89 21-2 49-3 61 10 15 16 6 34-8 41-14 7-35 3-51 1" stroke="url(#pathroo-gradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"/>
+  <path d="m105 13 2.8 6.2L114 22l-6.2 2.8L105 31l-2.8-6.2L96 22l6.2-2.8z" fill="#a855f7"/>
+</svg>

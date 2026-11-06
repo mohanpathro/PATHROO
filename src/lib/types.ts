@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Canonical domain types for Argus.
+// Canonical domain types for PATHROO.
 // Every live source normalises INTO `Opportunity`. The whole app reads this one
 // shape — the feed, the ranking engine, the nudge scheduler, the UI cards.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +123,8 @@ export interface SourceRun {
   label: string;
   ok: boolean;
   count: number;
+  expiredCount?: number;
+  invalidCount?: number;
   durationMs: number;
   error?: string;
   ranAt: string;

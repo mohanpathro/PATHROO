@@ -1,8 +1,12 @@
-# Argus
+# PATHROO
 
-> **Argus** is a student opportunity platform. It pulls internships, scholarships, competitions, hackathons and events from **live sources** into one place, ranks them for your profile with an AI-powered insight layer, and **reminds you before every deadline.**
+> **Find Your Path. Unlock Your Future.**
+>
+> DISCOVER · QUALIFY · PREPARE · ACHIEVE
 
-Most students juggle a dozen siloed platforms and still miss things — and the costliest failure mode isn't a weak profile, it's a **deadline that slipped by**. Argus is a neutral *aggregation + reminder layer* across every category: it surfaces what's relevant to you and pings you in time. We always deep-link out to the original site to apply — we're never the application endpoint.
+> **PATHROO** is a student opportunity platform. It pulls internships, scholarships, competitions, hackathons and events from **live sources** into one place, ranks them for your profile with an AI-powered insight layer, and **reminds you before every deadline.**
+
+Most students juggle a dozen siloed platforms and still miss things — and the costliest failure mode isn't a weak profile, it's a **deadline that slipped by**. PATHROO is a neutral *aggregation + reminder layer* across every category: it surfaces what's relevant to you and pings you in time. We always deep-link out to the original site to apply — we're never the application endpoint.
 
 ---
 Live Link : https://opportunity-radar-theta.vercel.app/feed
@@ -23,7 +27,7 @@ Live Link : https://opportunity-radar-theta.vercel.app/feed
 
 ## Quick start
 
-To run Argus locally, you will need a `.env.local` file with your API keys.
+To run PATHROO locally, you will need a `.env.local` file with your API keys.
 
 1. Create a `.env.local` file in the root directory:
 ```env
@@ -291,7 +295,7 @@ npm run lint     # eslint
 
 ## Compliance
 
-Argus is a discovery & notification layer. We aggregate public APIs, RSS and curated datasets; honour `robots.txt`, source ToS and removal requests; store facts not verbatim republication; and **always deep-link out to the original source to apply.**
+PATHROO is a discovery & notification layer. We aggregate public APIs, RSS and curated datasets; honour `robots.txt`, source ToS and removal requests; store facts not verbatim republication; and **always deep-link out to the original source to apply.**
 
 ---
 

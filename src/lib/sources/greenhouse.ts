@@ -1,6 +1,6 @@
 import type { Eligibility, Opportunity, SourceAdapter } from "../types";
 import { buildTags, canonicalizeTerms } from "../normalize";
-import { parseMoney, parseRangeEnd, parseRangeStart, toISO } from "../parse";
+import { parseMoney, parseRangeEnd, parseRangeStart, toDeadlineISO, toISO } from "../parse";
 import { BOT_UA, buildOpportunity, fetchJson, snippet } from "./_shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ function normalize(job: GhJob, board: GhBoard): Opportunity | null {
   // Deadline: Greenhouse `application_deadline` is usually null → rolling.
   // Fall back to a date parsed out of the description if content was fetched.
   const deadline =
-    toISO(job.application_deadline ?? undefined) ??
+    toDeadlineISO(job.application_deadline ?? undefined) ??
     (job.content ? parseRangeEnd(decodeHtml(job.content)) : undefined);
 
   const postedAt = toISO(job.first_published) ?? toISO(job.updated_at);
@@ -209,7 +209,10 @@ async function fetchBoard(board: GhBoard): Promise<Opportunity[]> {
   // content=true gives us descriptions for opportunistic stipend/date parsing.
   const url = `https://boards-api.greenhouse.io/v1/boards/${board.token}/jobs?content=true`;
   const data = await fetchJson<GhResponse>(url, { ua: BOT_UA, timeoutMs: PER_TOKEN_TIMEOUT_MS });
-  const jobs = data.jobs ?? [];
+  if (!data || !Array.isArray(data.jobs)) {
+    throw new Error("Greenhouse board returned a malformed jobs list.");
+  }
+  const jobs = data.jobs;
   const out: Opportunity[] = [];
   for (const job of jobs) {
     try {

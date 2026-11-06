@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>PATHROO</title>
+  <rect width="64" height="64" rx="18" fill="#12152e"/>
+  <defs>
+    <linearGradient id="pathroo-gradient" x1="12" y1="55" x2="54" y2="8" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c084fc"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 53c-2-15-1-32 1-43 11-1 24-2 30 5 8 8 3 17-4 21-7 3-17 1-25 0" stroke="url(#pathroo-gradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+  <path d="m51 8 2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="#c084fc"/>
+</svg>

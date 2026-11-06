@@ -76,7 +76,7 @@ export async function setCachedAI<T>(
       expiresAt: Date.now() + ttlMs,
     };
     await fs.writeFile(fp, JSON.stringify(entry), "utf-8");
-  } catch (err) {
-    console.warn("[AI Cache] Write error:", err);
+  } catch {
+    console.warn("[AI Cache] Write failed");
   }
 }

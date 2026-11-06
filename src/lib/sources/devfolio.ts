@@ -1,6 +1,6 @@
 import type { Eligibility, Opportunity, SourceAdapter } from "../types";
 import { buildTags, canonicalizeTerms } from "../normalize";
-import { parseMoney, toISO } from "../parse";
+import { parseMoney, toDeadlineISO, toISO } from "../parse";
 import { BOT_UA, buildOpportunity, fetchJson, snippet } from "./_shared";
 
 // Devfolio public JSON — verified live 2026-06-22, zero-auth.
@@ -77,7 +77,7 @@ function normalize(h: DevfolioHackathon): Opportunity | null {
 
   // Deadline = registration close (reg_ends_at) when present, else event start.
   const setting = h.hackathon_setting ?? undefined;
-  const deadline = toISO(setting?.reg_ends_at) ?? toISO(h.starts_at);
+  const deadline = toDeadlineISO(setting?.reg_ends_at) ?? toDeadlineISO(h.starts_at);
   const startDate = toISO(h.starts_at);
 
   // A theme may carry a money signal (rare on this endpoint); try to surface it.
@@ -144,6 +144,9 @@ export const devfolioAdapter: SourceAdapter = {
         let data: DevfolioResponse;
         try {
           data = await fetchJson<DevfolioResponse>(url, { ua: BOT_UA, timeoutMs: 12_000 });
+          if (!data || !Array.isArray(data.result)) {
+            throw new Error("Devfolio response did not contain a hackathon list.");
+          }
           anySuccess = true;
         } catch (err) {
           // Isolate per-request failure; keep collecting from other pages/filters.

@@ -30,7 +30,7 @@ export function buildICS(o: Opportunity): string {
     "",
     `Apply / details: ${o.sourceUrl}`,
     "",
-    "Reminder by Argus.",
+    "Reminder by PATHROO.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -38,11 +38,11 @@ export function buildICS(o: Opportunity): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Argus//Deadline//EN",
+    "PRODID:-//PATHROO//Deadline//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:${o.id}@Argus`,
+    `UID:${o.id}@PATHROO`,
     `DTSTAMP:${toICSDate(new Date().toISOString())}`,
     `DTSTART:${start}`,
     `DTEND:${end}`,
@@ -75,7 +75,7 @@ export function googleCalendarUrl(o: Opportunity): string {
     action: "TEMPLATE",
     text: o.category === "event" ? `📅 ${o.title}` : `⏰ ${meta.singular} deadline: ${o.title}`,
     dates: `${start}/${end}`,
-    details: `${o.summary ?? ""}\n\nApply / details: ${o.sourceUrl}\n\nReminder by Argus.`,
+    details: `${o.summary ?? ""}\n\nApply / details: ${o.sourceUrl}\n\nReminder by PATHROO.`,
     location: o.sourceUrl,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;

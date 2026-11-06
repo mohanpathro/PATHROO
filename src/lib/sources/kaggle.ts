@@ -1,6 +1,6 @@
 import type { Opportunity, SourceAdapter } from "../types";
 import { buildTags } from "../normalize";
-import { parseMoney, toISO } from "../parse";
+import { parseMoney, toDeadlineISO } from "../parse";
 import { buildOpportunity, fetchJson, snippet } from "./_shared";
 
 // Kaggle competitions API — free token from kaggle.com → Account → "Create New API Token"
@@ -56,7 +56,7 @@ export const kaggleAdapter: SourceAdapter = {
             summary: snippet(c.description),
             isRemote: true,
             location: "Online",
-            deadline: toISO(c.deadline),
+            deadline: toDeadlineISO(c.deadline),
             tags: buildTags({ explicit: ["machine-learning", "data-science", "python"], text: c.title, limit: 8 }),
             prizeAmount: money?.max && money.max > 0 ? money.max : undefined,
             currency: money?.currency ?? "USD",

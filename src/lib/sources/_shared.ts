@@ -3,7 +3,7 @@ import { stableHash } from "../utils";
 
 /** Honest, contactable bot identity (per the compliance/legality research). */
 export const BOT_UA =
-  "ArgusBot/1.0 (+https://Argus.app; student opportunity aggregator; contact: hello@Argus.app)";
+  "PATHROOBot/1.0 (+https://opportunity-radar-theta.vercel.app; student opportunity aggregator; contact: hello@Argus.app)";
 
 /** A browser-ish UA for the handful of endpoints that 403 a bot UA (e.g. Unstop). */
 export const BROWSER_UA =
@@ -32,7 +32,8 @@ async function doFetch(url: string, opts: FetchOpts = {}): Promise<Response> {
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
+    const hostname = new URL(url).hostname;
+    throw new Error(`HTTP ${res.status} from ${hostname}`);
   }
   return res;
 }

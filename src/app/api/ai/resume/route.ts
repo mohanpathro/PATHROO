@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/groq";
+import { generateJSON, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { resumeAnalysisPrompt } from "@/lib/ai/prompts";
 import { peekCorpus } from "@/lib/store";
@@ -61,21 +61,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ analysis });
   } catch (err: unknown) {
-    console.error("[AI Resume]", err);
-    let msg = "Failed to analyze resume";
-    if (err instanceof Error) {
-      try {
-        const parsed = JSON.parse(err.message);
-        if (parsed.error && parsed.error.message) {
-          msg = parsed.error.message;
-        } else {
-          msg = err.message;
-        }
-      } catch {
-        msg = err.message;
-      }
-    }
-    return NextResponse.json({ error: msg }, { status: 500 });
+    logAIError("AI Resume", err);
+    return NextResponse.json({ error: "Failed to analyze resume" }, { status: 500 });
   }
 }
 

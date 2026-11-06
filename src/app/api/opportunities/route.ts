@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorpus } from "@/lib/corpus";
+import { sanitizeSourceRuns } from "@/lib/sources/diagnostics";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export async function GET() {
   return NextResponse.json({
     count: corpus.opportunities.length,
     updatedAt: corpus.updatedAt,
-    runs: corpus.runs,
+    runs: sanitizeSourceRuns(corpus.runs),
     opportunities: corpus.opportunities,
   });
 }

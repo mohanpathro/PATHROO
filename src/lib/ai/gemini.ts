@@ -2,11 +2,8 @@ import "server-only";
 import { GoogleGenAI } from "@google/genai";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fallback AI provider. Google AI Studio's free tier (Gemini) is used ONLY
-// when Groq's primary model, its fallback model, AND a backoff-retry have all
-// hit rate limits — see lib/ai/groq.ts for the orchestration. This keeps Groq
-// as the fast default while giving the app a second, independent quota to
-// fall through to instead of failing the request outright.
+// Fallback AI provider. Groq remains the primary provider; see lib/ai/groq.ts
+// for fallback orchestration when its configured models or service fail.
 //
 // Get a free key (no credit card) at https://aistudio.google.com/apikey and
 // set GEMINI_API_KEY in .env.local / your Vercel project's env vars.

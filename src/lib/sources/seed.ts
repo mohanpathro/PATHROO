@@ -422,7 +422,7 @@ export const seedAdapter: SourceAdapter = {
     id: "seed",
     label: "Curated",
     category: "mixed",
-    homepage: "https://Argus.app",
+    homepage: "https://opportunity-radar-theta.vercel.app",
     tier: "seed",
   },
   // No network — always succeeds, guaranteeing the feed is never empty offline.

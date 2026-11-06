@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Firestore security rules for Argus / opportunity-radar.
+// Firestore security rules for PATHROO / opportunity-radar.
 //
 // All user data lives under users/{uid}. Every visitor gets a Firebase Auth
 // session (anonymous by default — see src/lib/firebase.ts), so `request.auth`

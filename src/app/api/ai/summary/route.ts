@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/groq";
+import { generateJSON, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { opportunitySummaryPrompt } from "@/lib/ai/prompts";
 import { getCachedAI, setCachedAI, contentHash } from "@/lib/ai/cache";
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ summary, cached: false });
   } catch (err: unknown) {
-    console.error("[AI Summary]", err);
+    logAIError("AI Summary", err);
     return NextResponse.json({ error: "Failed to generate summary" }, { status: 500 });
   }
 }

@@ -24,7 +24,7 @@
 .DS_Store
 *.pem
 
-# Argus live cache (corpus snapshot, VAPID keys, push subs)
+# PATHROO live cache (corpus snapshot, VAPID keys, push subs)
 /.cache/
 
 # debug

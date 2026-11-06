@@ -1,26 +1,38 @@
 import "server-only";
 import Groq from "groq-sdk";
 import { geminiAvailable, generateGeminiJSON, generateGeminiText } from "./gemini";
+import { logAIError } from "./errors";
+
+export { logAIError } from "./errors";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Singleton Groq client with automatic Tier-Fallback.
-// If llama-3.3-70b (100k TPD free limit) hits 429 rate limit, it automatically
-// switches to llama-3.1-8b-instant (500k TPD free limit), making the app
-// virtually immune to daily token exhaustion.
+// Singleton Groq client with automatic model fallback.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq: Groq | null = null;
 
-const PRIMARY_MODEL = "llama-3.3-70b-versatile";
-const FALLBACK_MODEL = "llama-3.1-8b-instant";
+const PRIMARY_MODEL = "openai/gpt-oss-20b";
+const FALLBACK_MODEL = "qwen/qwen3.8-27b";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isRateLimit(err: any): boolean {
+function getGroqClient(): Groq {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY is not configured");
+  if (!groq) groq = new Groq({ apiKey });
+  return groq;
+}
+
+function isRateLimit(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const error = err as Record<string, unknown>;
+  const nested = error.error && typeof error.error === "object"
+    ? error.error as Record<string, unknown>
+    : undefined;
+  const message = typeof error.message === "string" ? error.message : "";
   return (
-    err?.status === 429 ||
-    err?.error?.code === "rate_limit_exceeded" ||
-    err?.message?.includes("429") ||
-    err?.message?.includes("Rate limit")
+    error.status === 429 ||
+    nested?.code === "rate_limit_exceeded" ||
+    message.includes("429") ||
+    message.toLowerCase().includes("rate limit")
   );
 }
 
@@ -29,33 +41,43 @@ function isRateLimit(err: any): boolean {
  * (e.g. "Please try again in 40.6s"). Parse that instead of guessing, capped
  * so a single request can never stall a serverless function for too long.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function retryAfterMs(err: any, capMs = 4000): number {
-  const msg = err?.message || err?.error?.message || "";
+function retryAfterMs(err: unknown, capMs = 4000): number {
+  if (!err || typeof err !== "object") return Math.min(1500, capMs);
+  const error = err as Record<string, unknown>;
+  const nested = error.error && typeof error.error === "object"
+    ? error.error as Record<string, unknown>
+    : undefined;
+  const msg = typeof error.message === "string"
+    ? error.message
+    : typeof nested?.message === "string" ? nested.message : "";
   const match = /try again in ([\d.]+)s/i.exec(msg);
   if (match) return Math.min(Math.ceil(parseFloat(match[1]) * 1000), capMs);
   return Math.min(1500, capMs);
 }
 
 /**
- * Primary → fallback model → one backoff-and-retry of the fallback. Only the
- * last attempt's error is thrown; everything else is a warn + retry.
+ * Try the primary, then the fallback for provider/model failures. Rate limits
+ * get one bounded backoff retry on the fallback model.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createCompletion(params: any): Promise<any> {
+  const client = getGroqClient();
   try {
-    return await groq.chat.completions.create({ ...params, model: PRIMARY_MODEL });
-  } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
-    if (!isRateLimit(err)) throw err;
-    console.warn(`[Groq] Primary model rate limit (429). Auto-switching to fallback model (${FALLBACK_MODEL})…`);
-    try {
-      return await groq.chat.completions.create({ ...params, model: FALLBACK_MODEL });
-    } catch (err2: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
-      if (!isRateLimit(err2)) throw err2;
-      const waitMs = retryAfterMs(err2);
-      console.warn(`[Groq] Fallback model also rate limited (429). Retrying in ${waitMs}ms…`);
+    return await client.chat.completions.create({ ...params, model: PRIMARY_MODEL });
+  } catch (primaryError) {
+    logAIError("Groq primary model", primaryError);
+    if (isRateLimit(primaryError)) {
+      const waitMs = retryAfterMs(primaryError);
       await new Promise((resolve) => setTimeout(resolve, waitMs));
-      return await groq.chat.completions.create({ ...params, model: FALLBACK_MODEL });
+    }
+    try {
+      return await client.chat.completions.create({ ...params, model: FALLBACK_MODEL });
+    } catch (fallbackError) {
+      logAIError("Groq fallback model", fallbackError);
+      if (!isRateLimit(fallbackError)) throw fallbackError;
+      const waitMs = retryAfterMs(fallbackError);
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      return await client.chat.completions.create({ ...params, model: FALLBACK_MODEL });
     }
   }
 }
@@ -104,9 +126,8 @@ async function completeTextViaGroq(systemPrompt: string, userPrompt: string): Pr
 
 /**
  * Generate a structured JSON response. Tries Groq (primary → fallback model →
- * backoff retry, all inside createCompletion) first since it's fastest; if
- * every Groq attempt is still rate-limited AND a GEMINI_API_KEY is configured,
- * falls through to Gemini as a fully independent quota instead of failing.
+ * fallback attempt) first; if Groq fails and GEMINI_API_KEY is configured,
+ * falls through to Gemini as an independent provider.
  */
 export async function generateJSON<T>(
   systemPrompt: string,
@@ -115,17 +136,17 @@ export async function generateJSON<T>(
 ): Promise<T> {
   try {
     return await completeJSONViaGroq<T>(systemPrompt, userPrompt, maxTokens);
-  } catch (err) {
-    if (isRateLimit(err) && geminiAvailable()) {
-      console.warn("[AI] Groq exhausted (primary + fallback + retry). Falling back to Gemini…");
+  } catch (groqError) {
+    if (geminiAvailable()) {
+      logAIError("Groq providers", groqError);
       try {
         return await generateGeminiJSON<T>(systemPrompt, userPrompt, maxTokens);
       } catch (geminiErr) {
-        console.error("[AI] Gemini fallback also failed:", geminiErr);
-        throw err; // surface the original Groq error — more familiar/actionable
+        logAIError("Gemini fallback", geminiErr);
+        throw new Error("AI providers failed");
       }
     }
-    throw err;
+    throw groqError;
   }
 }
 
@@ -136,17 +157,17 @@ export async function generateText(
 ): Promise<string> {
   try {
     return await completeTextViaGroq(systemPrompt, userPrompt);
-  } catch (err) {
-    if (isRateLimit(err) && geminiAvailable()) {
-      console.warn("[AI] Groq exhausted (primary + fallback + retry). Falling back to Gemini…");
+  } catch (groqError) {
+    if (geminiAvailable()) {
+      logAIError("Groq providers", groqError);
       try {
         return await generateGeminiText(systemPrompt, userPrompt);
       } catch (geminiErr) {
-        console.error("[AI] Gemini fallback also failed:", geminiErr);
-        throw err;
+        logAIError("Gemini fallback", geminiErr);
+        throw new Error("AI providers failed");
       }
     }
-    throw err;
+    throw groqError;
   }
 }
 
@@ -156,7 +177,7 @@ export async function generateStream(
   userPrompt: string,
 ) {
   try {
-    return await groq.chat.completions.create({
+    return await getGroqClient().chat.completions.create({
       model: PRIMARY_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
@@ -166,8 +187,9 @@ export async function generateStream(
       max_tokens: 1024,
       stream: true,
     });
-  } catch (err: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) { /* eslint-disable-line @typescript-eslint/no-unused-vars */
-    return await groq.chat.completions.create({
+  } catch (err: unknown) {
+    logAIError("Groq stream primary model", err);
+    return await getGroqClient().chat.completions.create({
       model: FALLBACK_MODEL,
       messages: [
         { role: "system", content: systemPrompt },

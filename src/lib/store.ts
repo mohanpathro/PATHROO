@@ -85,7 +85,7 @@ export async function refreshCorpus(
       if (fresh.opportunities.length === 0) {
         const prev = await peekCorpus();
         if (prev && prev.opportunities.length > 0) {
-          return setCorpus({ ...prev, runs: fresh.runs, updatedAt: new Date().toISOString() });
+          return setCorpus({ ...prev, runs: fresh.runs });
         }
       }
       return setCorpus(fresh);

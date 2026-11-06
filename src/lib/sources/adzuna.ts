@@ -2,6 +2,7 @@ import type { Opportunity, SourceAdapter } from "../types";
 import { buildTags } from "../normalize";
 import { toISO } from "../parse";
 import { BOT_UA, buildOpportunity, fetchJson, snippet } from "./_shared";
+import { sanitizeSourceError } from "./diagnostics";
 
 // Adzuna India jobs API — free key from https://developer.adzuna.com/
 // Env-gated: this source only appears once ADZUNA_APP_ID + ADZUNA_APP_KEY are set.
@@ -62,11 +63,17 @@ export const adzunaAdapter: SourceAdapter = {
     const out: Opportunity[] = [];
     let lastErr: unknown = null;
     for (const what of QUERIES) {
-      const url =
-        `https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${id}&app_key=${key}` +
-        `&results_per_page=30&max_days_old=60&content-type=application/json&what=${encodeURIComponent(what)}`;
+      const url = new URL("https://api.adzuna.com/v1/api/jobs/in/search/1");
+      url.search = new URLSearchParams({
+        app_id: id,
+        app_key: key,
+        results_per_page: "30",
+        max_days_old: "60",
+        "content-type": "application/json",
+        what,
+      }).toString();
       try {
-        const data = await fetchJson<AdzunaResp>(url, { ua: BOT_UA, timeoutMs: 12_000 });
+        const data = await fetchJson<AdzunaResp>(url.toString(), { ua: BOT_UA, timeoutMs: 12_000 });
         for (const j of data.results ?? []) {
           const o = normalize(j);
           if (o && !seen.has(o.id)) {
@@ -75,7 +82,7 @@ export const adzunaAdapter: SourceAdapter = {
           }
         }
       } catch (err) {
-        lastErr = err;
+        lastErr = new Error(sanitizeSourceError(err));
       }
     }
     // If we got nothing AND every query errored, surface it (likely a bad key/quota).

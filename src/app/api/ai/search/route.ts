@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/groq";
+import { generateJSON, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { queryExpansionPrompt } from "@/lib/ai/prompts";
 import { getCorpus } from "@/lib/corpus";
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       total: result.total,
     });
   } catch (err: unknown) {
-    console.error("[AI Search]", err);
+    logAIError("AI Search", err);
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
 }

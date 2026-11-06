@@ -118,7 +118,10 @@ export const hackerearthAdapter: SourceAdapter = {
   },
   async fetch(): Promise<Opportunity[]> {
     const data = await fetchJson<HEResponse>(ENDPOINT, { ua: BOT_UA, timeoutMs: 12_000 });
-    const events = Array.isArray(data.response) ? data.response : [];
+    if (!data || !Array.isArray(data.response)) {
+      throw new Error("HackerEarth returned a malformed events list.");
+    }
+    const events = data.response;
 
     const seen = new Set<string>();
     const out: Opportunity[] = [];

@@ -1,4 +1,4 @@
-/* Argus service worker — web push deadline nudges. */
+/* PATHROO service worker — web push deadline nudges. */
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -13,14 +13,14 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "Argus", body: event.data ? event.data.text() : "" };
+    data = { title: "PATHROO", body: event.data ? event.data.text() : "" };
   }
   const title = data.title || "⏰ Deadline approaching";
   const options = {
     body: data.body || "An opportunity you're tracking is closing soon.",
     icon: "/icon.svg",
     badge: "/icon.svg",
-    tag: data.tag || "Argus",
+    tag: data.tag || "PATHROO",
     data: { url: data.url || "/notifications" },
     requireInteraction: false,
     vibrate: [80, 40, 80],

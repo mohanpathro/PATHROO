@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorpus } from "@/lib/corpus";
+import { sanitizeSourceRuns } from "@/lib/sources/diagnostics";
 import { buildFeed, type FilterState, type SortKey } from "@/lib/feed";
 import type { Profile } from "@/lib/types";
 
@@ -19,6 +20,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ...result,
     updatedAt: corpus.updatedAt,
-    runs: corpus.runs,
+    runs: sanitizeSourceRuns(corpus.runs),
   });
 }

@@ -25,6 +25,19 @@ export function toISO(value: unknown): string | undefined {
   return undefined;
 }
 
+/** A date-only application deadline stays open through the full stated date. */
+export function toDeadlineISO(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const dateOnly = /^(\d{4}-\d{2}-\d{2})$/.exec(value.trim());
+    if (dateOnly) {
+      const date = new Date(`${dateOnly[1]}T00:00:00.000Z`);
+      if (isNaN(+date) || date.toISOString().slice(0, 10) !== dateOnly[1]) return undefined;
+      return `${dateOnly[1]}T23:59:59.999Z`;
+    }
+  }
+  return toISO(value);
+}
+
 /**
  * Parse a human date *range* like "May 19 - Aug 17, 2026" and return the END
  * (the close date that matters for deadlines). Falls back to the single date.
@@ -36,7 +49,9 @@ export function parseRangeEnd(text: string | undefined): string | undefined {
   const last = results[results.length - 1];
   const end = last.end ?? last.start;
   const d = end.date();
-  return isNaN(+d) ? undefined : d.toISOString();
+  if (isNaN(+d)) return undefined;
+  if (!end.isCertain("hour")) d.setUTCHours(23, 59, 59, 999);
+  return d.toISOString();
 }
 
 export function parseRangeStart(text: string | undefined): string | undefined {

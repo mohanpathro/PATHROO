@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <title>PATHROO app icon</title>
+  <rect width="512" height="512" rx="118" fill="#12152e"/>
+  <defs>
+    <linearGradient id="pathroo-gradient" x1="100" y1="420" x2="418" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c084fc"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <path d="M160 430c-17-120-9-264 8-351 83-8 196-12 244 39 61 65 24 134-32 164-55 28-139 12-204 5" stroke="url(#pathroo-gradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="42"/>
+  <path d="m444 70 15 34 34 15-34 15-15 34-15-34-34-15 34-15z" fill="#c084fc"/>
+</svg>

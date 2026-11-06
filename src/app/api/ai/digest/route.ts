@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/groq";
+import { generateJSON, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { weeklyDigestPrompt } from "@/lib/ai/prompts";
 import { getCorpus } from "@/lib/corpus";
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ digest });
   } catch (err: unknown) {
-    console.error("[AI Digest]", err);
+    logAIError("AI Digest", err);
     return NextResponse.json({ error: "Failed to generate digest" }, { status: 500 });
   }
 }

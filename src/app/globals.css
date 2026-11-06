@@ -1,22 +1,21 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Argus — authored "signal instrument" system.
-   Brand is a bespoke electric cyan-teal ramp built in oklch (deliberately NOT
-   Tailwind blue). Amber is the warm counter-accent (deadlines/urgency) for
-   cool-brand/warm-CTA tension. Blur is rationed to a single layer (the app bar).
+   PATHROO — authored opportunity-discovery system.
+   The brand is a vivid violet ramp with a purple-to-blue identity gradient.
+   Amber remains the warm counter-accent for deadline urgency.
    ───────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  /* Brand — electric cyan-teal, authored in oklch */
-  --color-signal-50: oklch(0.972 0.02 195);
-  --color-signal-100: oklch(0.93 0.05 194);
-  --color-signal-200: oklch(0.89 0.08 193);
-  --color-signal-300: oklch(0.84 0.108 193);
-  --color-signal-400: oklch(0.785 0.138 192);
-  --color-signal-500: oklch(0.715 0.146 192);
-  --color-signal-600: oklch(0.585 0.122 193);
-  --color-signal-700: oklch(0.5 0.1 194);
+  /* Brand — vivid violet, paired with the logo's electric-blue gradient */
+  --color-signal-50: oklch(0.978 0.018 286);
+  --color-signal-100: oklch(0.945 0.045 286);
+  --color-signal-200: oklch(0.9 0.085 286);
+  --color-signal-300: oklch(0.83 0.13 286);
+  --color-signal-400: oklch(0.75 0.18 286);
+  --color-signal-500: oklch(0.63 0.22 286);
+  --color-signal-600: oklch(0.53 0.2 286);
+  --color-signal-700: oklch(0.45 0.17 286);
 
   /* Semantic — info is distinct from the brand; amber is the warm counter-accent */
   --color-success: oklch(0.66 0.16 150);

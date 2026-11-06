@@ -75,7 +75,10 @@ export const devpostAdapter: SourceAdapter = {
     for (let page = 1; page <= MAX_PAGES; page++) {
       const url = `https://devpost.com/api/hackathons?status[]=open&page=${page}`;
       const data = await fetchJson<DevpostResponse>(url, { ua: BOT_UA, timeoutMs: 12_000 });
-      const items = data.hackathons ?? [];
+      if (!data || !Array.isArray(data.hackathons)) {
+        throw new Error("Devpost response did not contain a hackathon list.");
+      }
+      const items = data.hackathons;
       if (!items.length) break;
       for (const h of items) {
         const o = normalize(h);

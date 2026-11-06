@@ -50,7 +50,9 @@ export const codeforcesAdapter: SourceAdapter = {
     const data = await fetchJson<CFResponse>("https://codeforces.com/api/contest.list?gym=false", {
       timeoutMs: 12_000,
     });
-    if (data.status !== "OK" || !Array.isArray(data.result)) return [];
+    if (data.status !== "OK" || !Array.isArray(data.result)) {
+      throw new Error("Codeforces API returned an unsuccessful or malformed response.");
+    }
     const out: Opportunity[] = [];
     for (const c of data.result) {
       const o = normalize(c);

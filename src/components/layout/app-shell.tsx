@@ -66,9 +66,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Top app bar */}
       <header className="glass sticky top-0 z-40 border-b border-line">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
-          <Link href="/feed" aria-label="Argus home">
+          <Link href="/feed" aria-label="PATHROO home">
             <Wordmark size={24} />
           </Link>
+          <span className="hidden text-[10px] font-medium tracking-wide text-ink-3 lg:inline">
+            Find Your Path. Unlock Your Future.
+          </span>
 
           {/* desktop search */}
           <button
@@ -114,6 +117,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 pb-24 md:pb-12">{children}</main>
+
+      <footer className="mx-auto mb-20 flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line px-4 py-4 text-[10px] text-ink-3 md:mb-0 md:px-6">
+        <span className="font-medium">Find Your Path. Unlock Your Future.</span>
+        <span className="tracking-[0.16em]">DISCOVER · QUALIFY · PREPARE · ACHIEVE</span>
+      </footer>
 
       {/* Floating pill tab bar (mobile) */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] md:hidden">

@@ -1,7 +1,7 @@
 import type { Opportunity, SourceAdapter } from "../types";
 import { buildOpportunity, fetchJson, snippet, BROWSER_UA } from "./_shared";
 import { buildTags } from "../normalize";
-import { parseMoney, toISO } from "../parse";
+import { parseMoney, toDeadlineISO, toISO } from "../parse";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Unstop (formerly Dare2Compete) — the best single India-wide source; spans
@@ -138,7 +138,7 @@ function normalize(item: UnstopItem, category: Category): Opportunity | null {
 
   // Deadline: prefer registration close; fall back to end_date.
   const deadline =
-    toISO(item.regnRequirements?.end_regn_dt) || toISO(item.end_date);
+    toDeadlineISO(item.regnRequirements?.end_regn_dt) || toDeadlineISO(item.end_date);
   const startDate = toISO(item.regnRequirements?.start_regn_dt);
 
   // Remote detection: region "online", or a WFH internship.
@@ -229,7 +229,10 @@ function normalize(item: UnstopItem, category: Category): Opportunity | null {
 async function fetchType(param: string, category: Category): Promise<Opportunity[]> {
   const url = `${ENDPOINT}?opportunity=${encodeURIComponent(param)}&page=1&per_page=${PER_PAGE}&oppstatus=open`;
   const data = await fetchJson<UnstopResponse>(url, { ua: BROWSER_UA, timeoutMs: 12_000 });
-  const items = data?.data?.data ?? [];
+  if (!data?.data || !Array.isArray(data.data.data)) {
+    throw new Error("Unstop returned a malformed opportunity list.");
+  }
+  const items = data.data.data;
   const out: Opportunity[] = [];
   for (const item of items) {
     try {

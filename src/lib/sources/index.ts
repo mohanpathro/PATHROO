@@ -10,9 +10,7 @@ import { greenhouseAdapter } from "./greenhouse";
 import { arbeitnowAdapter } from "./arbeitnow";
 import { adzunaAdapter } from "./adzuna";
 import { kaggleAdapter } from "./kaggle";
-import { scholarshipsAdapter } from "./scholarships";
 import { lumaAdapter } from "./luma";
-import { seedAdapter } from "./seed";
 import { dorahacksAdapter } from "./dorahacks";
 import { hackerearthAdapter } from "./hackerearth";
 
@@ -23,7 +21,8 @@ const kaggleConfigured = !!(process.env.KAGGLE_USERNAME && process.env.KAGGLE_KE
  * The live-source registry. The aggregator runs them all concurrently and
  * isolates failures. Key-gated sources (Adzuna, Kaggle) only join the registry
  * once their env vars are set in .env.local — add the keys, restart, done.
- * Curated sources (scholarships, seed) always succeed and keep the feed full.
+ * Adapters with illustrative, non-current dates (curated scholarships and seed
+ * examples) are deliberately excluded from the live corpus.
  */
 export const ADAPTERS: SourceAdapter[] = [
   devpostAdapter,
@@ -37,11 +36,9 @@ export const ADAPTERS: SourceAdapter[] = [
   arbeitnowAdapter,
   ...(adzunaConfigured ? [adzunaAdapter] : []),
   ...(kaggleConfigured ? [kaggleAdapter] : []),
-  scholarshipsAdapter,
   lumaAdapter,
   dorahacksAdapter,
   hackerearthAdapter,
-  seedAdapter,
 ];
 
 export const SOURCE_META = ADAPTERS.map((a) => a.meta);

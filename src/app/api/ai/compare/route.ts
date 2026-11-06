@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/groq";
+import { generateJSON, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { comparisonPrompt } from "@/lib/ai/prompts";
 import { getCorpus } from "@/lib/corpus";
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ comparison });
   } catch (err: unknown) {
-    console.error("[AI Compare]", err);
+    logAIError("AI Compare", err);
     return NextResponse.json({ error: "Failed to generate comparison" }, { status: 500 });
   }
 }

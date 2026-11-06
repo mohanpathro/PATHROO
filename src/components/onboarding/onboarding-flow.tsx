@@ -340,7 +340,7 @@ function StepPreview({ draft, onFinish }: { draft: Profile; onFinish: () => void
       )}
 
       <Button onClick={onFinish} size="lg" className="w-full">
-        Enter Argus <ArrowRight size={18} />
+        Enter PATHROO <ArrowRight size={18} />
       </Button>
     </div>
   );

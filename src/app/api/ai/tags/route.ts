@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/ai/groq";
+import { generateJSON, logAIError } from "@/lib/ai/groq";
 import { aiRateLimit } from "@/lib/server/ai-guard";
 import { smartTagsPrompt } from "@/lib/ai/prompts";
 import { getCachedAI, setCachedAI, contentHash } from "@/lib/ai/cache";
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ tags, cached: false });
   } catch (err: unknown) {
-    console.error("[AI Tags]", err);
+    logAIError("AI Tags", err);
     return NextResponse.json({ error: "Failed to generate tags" }, { status: 500 });
   }
 }

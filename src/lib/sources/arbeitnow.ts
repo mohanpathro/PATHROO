@@ -111,7 +111,10 @@ export const arbeitnowAdapter: SourceAdapter = {
       data = await fetchJson<ArbeitnowResponse>(API_URL, { ua: BROWSER_UA, timeoutMs: 12_000 });
     }
 
-    const jobs = data.data ?? [];
+    if (!data || !Array.isArray(data.data)) {
+      throw new Error("Arbeitnow returned a malformed jobs list.");
+    }
+    const jobs = data.data;
     const out: Opportunity[] = [];
     const seen = new Set<string>();
 
